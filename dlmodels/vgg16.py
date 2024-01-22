@@ -58,7 +58,7 @@ def vgg16(input_shape=(224, 224, 4)):
     x = Conv2D(filters=512, kernel_size=(3, 3), padding='same', activation='relu')(x)
     x = Conv2D(filters=512, kernel_size=(3, 3), padding='same', activation='relu')(x)
     x = Conv2D(filters=512, kernel_size=(3, 3), padding='same', activation='relu')(x)
-    x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
+    #x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
 
     
 
