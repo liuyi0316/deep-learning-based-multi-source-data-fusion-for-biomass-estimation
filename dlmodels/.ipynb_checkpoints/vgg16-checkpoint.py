@@ -10,25 +10,14 @@ import numpy as np
 from tensorflow.keras import layers, models
 from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D
 from tensorflow.keras.models import Model
+from .vgg16_s20 import vgg16_20
 
 
-def vgg16_20(input_shape=(112,112,6)): #sentinel-2 20m
+
+def vgg16(input_shape_10=(224, 224, 4), input_shape_20m=(112, 112, 6)):
+    input_20, output_20 = vgg16_20(input_shape_20m)
     # 定义输入
-    inputs = Input(shape=input_shape)
-
-    # 第一个卷积块
-    x = Conv2D(filters=64, kernel_size=(3, 3), padding='same', activation='relu')(inputs)
-    x = Conv2D(filters=64, kernel_size=(3, 3), padding='same', activation='relu')(x)
-  
-    
-    model_20 = vgg20.Model(inputs=inputs, outputs=x)
-
-    return model_20
-
-
-def vgg16(input_shape=(224, 224, 4)):
-    # 定义输入
-    inputs = layers.Input(shape=input_shape)
+    inputs = layers.Input(input_shape_10)
 
     # 第一个卷积块
     x = Conv2D(filters=64, kernel_size=(3, 3), padding='same', activation='relu')(inputs)
@@ -37,8 +26,8 @@ def vgg16(input_shape=(224, 224, 4)):
     
     
     #concatenate
-    feature_20 = vgg16_20(input_shape=(112,112,6)) #feature 112*112*64 from senitnel-2 20m
-    merge = layers.concatenate([x, feature_20])
+    inputs_20, feature_20 = vgg16_20(input_shape=(112,112,6))
+    merge = layers.concatenate([x, output_20])  # 确保这两个张量形状可以融合
     
     # 第二个卷积块
     x = Conv2D(filters=128, kernel_size=(3, 3), padding='same', activation='relu')(merge)
@@ -61,9 +50,8 @@ def vgg16(input_shape=(224, 224, 4)):
     x = Conv2D(filters=512, kernel_size=(3, 3), padding='same', activation='relu')(x)
     x = Conv2D(filters=512, kernel_size=(3, 3), padding='same', activation='relu')(x)
     x = Conv2D(filters=512, kernel_size=(3, 3), padding='same', activation='relu')(x)
-    x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
+    #x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
 
-    # 创建模型
-    model = vggmodel.Model(inputs=inputs, outputs=x)
+    
 
-    return model
+    return inputs,input_20,x
