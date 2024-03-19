@@ -64,7 +64,8 @@ from fusion import create_model
 import os
 
 # 定义数据集目录
-BASE_DIR = "dataset"
+BASE_DIR = "/home/jovyan/private/thesis_data/code/final_code/dataset"
+
 # 假设您有三个不同的目录，分别存储不同类型的图像
 S1_IMAGE_DIR = os.path.join(BASE_DIR, "sentinel1_images")
 S2_10_IMAGE_DIR = os.path.join(BASE_DIR, "sentinel2_10_images")
@@ -76,9 +77,9 @@ LABEL_100_DIR = os.path.join(BASE_DIR, "LABEL_100_DIR")
 
 # 定义常量
 
-BATCH_SIZE = 2
+BATCH_SIZE = 1
 EPOCHS = 50
-STEPS = 200
+STEPS = 20
 
 # 定义测试和验证图像的文件名
 # 假设每种类型的图像都有相同的命名方式
@@ -92,30 +93,6 @@ patch_sizes = {"s1": (224, 224), "s2_10": (224, 224),"s2_20":(112,112), "gedi": 
 bands_count = {"s1": 6, "s2_10": 4,"s2_20":6,"gedi":5 }
 label_dirs = ['LABEL_250_DIR', 'LABEL_100_DIR']
 
-
-#####read multiband image
-
-
-# def read_and_preprocess_image(image_path, normalise_percentiles=NORMALISE_PERCENTILES):
-#     with rasterio.open(image_path) as image_file:
-#         image_arr = image_file.read()  # Reads all bands
-#         if normalise_percentiles:
-#             for band in range(image_arr.shape[0]):
-#                 band_arr = image_arr[band]
-#                 min_value = np.percentile(band_arr, normalise_percentiles[0])
-#                 max_value = np.percentile(band_arr, normalise_percentiles[1])
-#                 image_arr[band] = (band_arr - min_value) / (max_value - min_value)
-#     return image_arr.transpose(1, 2, 0)  # Reorder dimensions to height x width x bands
-
-
-
-# def apply_template(image_arr, template):
-#     template_mask = np.all(template == 0, axis=-1)  # 创建模板遮罩
-#     for band in range(image_arr.shape[0]):
-#         band_arr = image_arr[band, :, :]
-#         band_arr[template_mask] = 0  # 应用模板遮罩
-#         image_arr[band, :, :] = band_arr
-#     return image_arr
 
 
 def read_and_preprocess_image(image_path, normalise_percentiles=(2, 98), is_complex=False):
@@ -182,17 +159,6 @@ def read_single_band_image(image_path, normalise_percentiles=(2, 98)):
     # Adds a channel dimension and returns
     return np.expand_dims(single_band_image, axis=-1)
 
-# This function pads an image to the nearest size divisible by patch_size
-# def pad_image_to_patch_size(image, patch_size=PATCH_SIZE):
-#     height, width, _ = image.shape
-#     target_height = patch_size * (height // patch_size + (height % patch_size > 0))
-#     target_width = patch_size * (width // patch_size + (width % patch_size > 0))
-#     pad_height = (target_height - height) // 2
-#     pad_width = (target_width - width) // 2
-#     padded_image = np.pad(image, ((pad_height, target_height - height - pad_height),
-#                                   (pad_width, target_width - width - pad_width),
-#                                   (0, 0)), mode='constant', constant_values=0)
-#     return padded_image
 
 
 #####别忘了patch
@@ -267,13 +233,14 @@ class TrainSequence(kutils.Sequence):
 
     def __len__(self):
         return self.len
-
+    
     def __getitem__(self, idx):
         batch_x = {key: np.empty((self.batch_size, *self.patch_sizes[key], self.bands_count[key])) for key in ['s1', 's2_10', 's2_20','gedi']}
         batch_y = [np.empty((self.batch_size, *self.patch_sizes[label_dir], 1)) for label_dir in self.label_dirs]
 
         for patch_index in range(self.batch_size):
-            images, labels = self.sample_image()
+            images,labels= self.sample_image()
+            #patch_image, patch_label = self.sample_patch(images)
             patch_images = {key: self.sample_patch(image, self.patch_sizes[key]) for key, image in images.items()}
             patch_labels = [self.sample_patch(label, self.patch_sizes[label_dir]) for label, label_dir in zip(labels, self.label_dirs)]
 
@@ -284,9 +251,16 @@ class TrainSequence(kutils.Sequence):
 
         return [batch_x[key] for key in batch_x], batch_y
 
+    # def sample_image(self):
+    #     image_index = np.random.choice(len(self.data))
+    #     return self.data[image_index]
     def sample_image(self):
         image_index = np.random.choice(len(self.data))
-        return self.data[image_index]
+        selected_data = self.data[image_index]
+        images = selected_data[0]  # 第一个元素是图像的字典
+        labels = selected_data[1]  # 第二个元素是标签的列表
+        return images, labels  # 返回图像字典和标签列表
+
 
     def sample_patch(self, image, patch_size):
         height, width, _ = image.shape
@@ -300,9 +274,14 @@ class TrainSequence(kutils.Sequence):
 train_sequence = TrainSequence(TRAIN_IMAGES, BATCH_SIZE, patch_sizes, bands_count, STEPS, label_dirs)
 
 
-import numpy as np
-import os
-import keras.utils as kutils
+# 获取第一个批次的数据
+x, y = train_sequence[0]
+
+# 打印出该批次数据的形状和类型
+print(f"Shape of x: {x[0].shape}")  # 假设x是多输入的情况，调整索引以匹配您的数据结构
+print(f"Type of x: {type(x[0])}")
+print(f"Shape of y: {y[1].shape}")  # 假设y是多输出的情况，调整索引以匹配您的数据结构
+print(f"Type of y: {type(y[1])}")
 
 class ValSequence(kutils.Sequence):
     def __init__(self, filenames, batch_size, patch_sizes, bands_count, label_dirs):
@@ -393,6 +372,13 @@ class ValSequence(kutils.Sequence):
 
 
 val_sequence = ValSequence(VAL_IMAGES, BATCH_SIZE, patch_sizes, bands_count, label_dirs)
+x, y = val_sequence[0]
+
+# 打印出该批次数据的形状和类型
+print(f"Shape of x: {x[0].shape}")  # 假设x是多输入的情况，调整索引以匹配您的数据结构
+print(f"Type of x: {type(x[0])}")
+print(f"Shape of y: {y[1].shape}")  # 假设y是多输出的情况，调整索引以匹配您的数据结构
+print(f"Type of y: {type(y[1])}")
 
 
 # 设置输入尺寸
