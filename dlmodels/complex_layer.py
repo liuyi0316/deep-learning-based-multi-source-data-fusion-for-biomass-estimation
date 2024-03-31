@@ -59,6 +59,31 @@ from tensorflow.keras.layers import Layer, MaxPooling2D
 
 
 # In[ ]:
+# class CConv2D(layers.Layer):
+#     def __init__(self, filters, kernel_size, strides=(1, 1), padding='same', **kwargs):
+#         super(CConv2D, self).__init__(**kwargs)
+#         self.filters = filters
+#         self.kernel_size = kernel_size
+#         self.strides = strides
+#         self.padding = padding
+#         # 实部卷积层
+#         self.re_conv = layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding)
+#         # 虚部卷积层
+#         self.im_conv = layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding)
+
+#     def call(self, inputs):
+#         # 假设 inputs 的最后一个维度已经是复数通道，其中实部和虚部交替出现
+#         # 对实部和虚部分别进行卷积处理
+#         out_re = self.re_conv(inputs[..., ::2]) - self.im_conv(inputs[..., 1::2])
+#         out_im = self.re_conv(inputs[..., 1::2]) + self.im_conv(inputs[..., ::2])
+#         # 将实部和虚部的结果沿通道维度拼接
+#         out = tf.concat([out_re, out_im], axis=-1)
+#         return out
+    
+# from tensorflow.keras import layers, initializers
+# import tensorflow as tf
+from tensorflow.keras import initializers
+
 class CConv2D(layers.Layer):
     def __init__(self, filters, kernel_size, strides=(1, 1), padding='same', **kwargs):
         super(CConv2D, self).__init__(**kwargs)
@@ -66,10 +91,22 @@ class CConv2D(layers.Layer):
         self.kernel_size = kernel_size
         self.strides = strides
         self.padding = padding
-        # 实部卷积层
-        self.re_conv = layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding)
-        # 虚部卷积层
-        self.im_conv = layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding)
+        # 实部卷积层，使用 He 初始化
+        self.re_conv = layers.Conv2D(
+            filters=filters,
+            kernel_size=kernel_size,
+            strides=strides,
+            padding=padding,
+            kernel_initializer=initializers.he_normal()  # 指定 He 初始化
+        )
+        # 虚部卷积层，同样使用 He 初始化
+        self.im_conv = layers.Conv2D(
+            filters=filters,
+            kernel_size=kernel_size,
+            strides=strides,
+            padding=padding,
+            kernel_initializer=initializers.he_normal()  # 指定 He 初始化
+        )
 
     def call(self, inputs):
         # 假设 inputs 的最后一个维度已经是复数通道，其中实部和虚部交替出现
@@ -79,6 +116,7 @@ class CConv2D(layers.Layer):
         # 将实部和虚部的结果沿通道维度拼接
         out = tf.concat([out_re, out_im], axis=-1)
         return out
+
 
 
 # class CBatchNorm(layers.Layer):
@@ -292,7 +330,8 @@ class MagnitudeOperation(layers.Layer):
         for i in range(0, inputs.shape[-1], 2):
             x_re = inputs[..., i]  # 实部
             x_im = inputs[..., i+1]  # 虚部
-            magnitude = tf.sqrt(tf.square(x_re) + tf.square(x_im))
+           
+            magnitude = tf.sqrt(tf.square(x_re) + tf.square(x_im) + 1e-10)
             magnitudes.append(magnitude)
 
         # 沿最后一个维度堆叠所有的幅度

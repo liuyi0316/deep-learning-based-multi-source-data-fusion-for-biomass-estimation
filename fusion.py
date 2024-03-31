@@ -19,23 +19,23 @@ def fusion(sentinel_1, sentinel_2, GEDI):
     merge = layers.concatenate([sentinel_1, sentinel_2, GEDI])
     
     # Fusion
-    x = Conv2D(filters=128, kernel_size=(3, 3), padding='same')(merge)
+    x = Conv2D(filters=128, kernel_size=(3, 3), padding='same', kernel_initializer='he_normal')(merge)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
 
-    x = Conv2D(filters=128, kernel_size=(3, 3), padding='same')(x)
+    x = Conv2D(filters=128, kernel_size=(3, 3), padding='same', kernel_initializer='he_normal')(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
 
-    x = Conv2D(filters=128, kernel_size=(3, 3), padding='same')(x)
+    x = Conv2D(filters=128, kernel_size=(3, 3), padding='same', kernel_initializer='he_normal')(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
 
-    x = Conv2D(filters=64, kernel_size=(3, 3), padding='same')(x)
+    x = Conv2D(filters=64, kernel_size=(3, 3), padding='same', kernel_initializer='he_normal')(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
 
-    x = Conv2D(filters=32, kernel_size=(3, 3), padding='same')(x)
+    x = Conv2D(filters=32, kernel_size=(3, 3), padding='same', kernel_initializer='he_normal')(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     
@@ -54,16 +54,16 @@ def fusion(sentinel_1, sentinel_2, GEDI):
 
 def task(fusion_output):
     # 卷积后尝试使用Batch Normalization
-    x = Conv2D(filters=32, kernel_size=(6, 6), padding='valid')(fusion_output)
+    x = Conv2D(filters=32, kernel_size=(6, 6), padding='valid', kernel_initializer='he_normal')(fusion_output)
     x = BatchNormalization()(x)  # 添加Batch Normalization
     x = Activation('relu')(x)  # 激活函数改为单独一层
     output_250 = Conv2D(filters=1, kernel_size=(3, 3), padding='same', activation='linear', name='output_250')(x)
 
     # 上采样部分也加上Batch Normalization
-    y = Conv2DTranspose(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='same')(fusion_output)
+    y = Conv2DTranspose(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='same', kernel_initializer='he_normal')(fusion_output)
     y = BatchNormalization()(y)  # 添加Batch Normalization
     y = Activation('relu')(y)  # 激活函数改为单独一层
-    y = Conv2D(filters=32, kernel_size=(6, 6), padding='valid')(y)
+    y = Conv2D(filters=32, kernel_size=(6, 6), padding='valid', kernel_initializer='he_normal')(y)
     y = BatchNormalization()(y)  # 再次添加Batch Normalization
     y = Activation('relu')(y)  # 激活函数改为单独一层
     output_100 = Conv2D(filters=1, kernel_size=(3, 3), padding='same', activation='linear', name='output_100')(y)
